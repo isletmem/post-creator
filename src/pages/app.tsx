@@ -1,115 +1,131 @@
+import useDownload from '@/hooks/useDownload'
 import '@fontsource/poppins'
 import html2canvas from 'html2canvas'
 import { useRef, useState } from 'react'
 
-import { ThemeProvider } from '@/components/theme-provider'
-import useDownload from '@/hooks/useDownload'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import '@/styles/globals.css'
 
 export default function App() {
   const canvasRef = useRef(null)
-  const { download } = useDownload()
-  const [h1, setH1] = useState('')
-  const [h2, setH2] = useState('')
-  const [h3, setH3] = useState('')
+  const previewRef = useRef(null)
   const [images, setImages] = useState([])
-  async function createImage(content) {
-    if (canvasRef.current) {
-      const newImages = await Promise.all(
-        content.map(async item => {
-          setH1(Math.random())
-          setH2(Math.random())
-          setH3(Math.random())
-          const canvas = await html2canvas(canvasRef.current, {
-            useCORS: true,
-            scale: 6
-          })
-          const data = canvas.toDataURL('image/jpeg')
-          console.log(item)
-          return data
-        })
-      )
-      download(newImages)
-      console.log(images)
-    }
-  }
+  const { download } = useDownload()
+  const [data, setData] = useState([])
+  const [form, setForm] = useState({
+    h1: 'Başlık',
+    h2: 'Alt baslık',
+    p: 'Anahtar kelime',
+    icon: 'megafon.png'
+  })
 
-  function clampBuilder(minWidthPx, maxWidthPx, minFontSize, maxFontSize) {
-    const root = document.querySelector('html')
-    const pixelsPerRem = Number(getComputedStyle(root).fontSize.slice(0, -2))
-
-    const minWidth = minWidthPx / pixelsPerRem
-    const maxWidth = maxWidthPx / pixelsPerRem
-
-    const slope = (maxFontSize - minFontSize) / (maxWidth - minWidth)
-    const yAxisIntersection = -minWidth * slope + minFontSize
-
-    return `clamp( ${minFontSize}rem, ${yAxisIntersection}rem + ${slope * 100}vw, ${maxFontSize}rem )`
-  }
-  function handleInput(e: any) {
-    const file = e.target.files[0]
-
-    if (file) {
-      const reader = new FileReader()
-
-      reader.onload = function (event) {
-        console.log(JSON.parse(event.target.result))
-        createImage(JSON.parse(event.target.result))
+  const nextData = () => {
+    let count = 0
+    const myInterval = setInterval(() => {
+      if (count < data.length) {
+        setForm(data[count])
       }
 
-      reader.readAsText(file)
-    } else {
-      console.log('No file selected')
+      generateCanvasImage()
+
+      count = count + 1
+      console.log(count)
+
+      if (count - 2 >= data.length) {
+        clearInterval(myInterval)
+
+        download(images)
+      }
+    }, 500)
+  }
+
+  const generateCanvasImage = async () => {
+    if (canvasRef.current) {
+      const canvas = await html2canvas(canvasRef.current, {
+        useCORS: true,
+        scale: 6
+      })
+
+      const data = canvas.toDataURL('image/jpeg')
+
+      if (previewRef.current) {
+        previewRef.current.src = data
+      }
+
+      images.push(data)
     }
+  }
+
+  const getClassForTextLength = (text, baseClass, thresholds) => {
+    if (!text) return baseClass
+    for (let [length, size] of thresholds) {
+      if (text.length > length) return `${baseClass} ${size}`
+    }
+    return baseClass
   }
 
   return (
-    <ThemeProvider defaultTheme="system" storageKey="ui-theme">
-      <main className="flex min-h-screen items-center justify-center p-8">
-        <div className="w-full max-w-[450px] gap-8 rounded-md border bg-card p-8 shadow">
-          <div
-            className="group relative aspect-square overflow-hidden rounded-md bg-muted"
-            ref={canvasRef}
-          >
-            <img
-              className="absolute h-full w-full"
-              src="/background.jpg"
-              alt="background"
-            />
-            <div className="relative flex h-full items-center justify-center text-center font-poppins">
-              <div
-                className="absolute"
-                style={{
-                  fontSize: clampBuilder(320, 514, 0.5, 1)
-                }}
+    <main className="flex min-h-screen flex-col items-center justify-center">
+      <div className="mb-4 flex gap-4">
+        <div
+          className="relative h-96 w-96 flex-shrink-0 bg-gray-500"
+          ref={canvasRef}
+        >
+          <img
+            className="absolute h-full w-full"
+            src="/background.jpg"
+            alt="Background"
+          />
+          <div className="relative flex h-full items-center justify-center px-4 text-center font-poppins">
+            <div>
+              <h1
+                className={getClassForTextLength(
+                  form.h1,
+                  'text-2xl font-bold',
+                  [
+                    [46, 'text-lg'],
+                    [28, 'text-xl']
+                  ]
+                )}
               >
-                <h1 className="font-semibold">{h1}</h1>
-                <h2 className="font-light">{h2}</h2>
-              </div>
-              <div
-                className="absolute bottom-[10%]"
-                style={{
-                  height: clampBuilder(320, 450, 2, 5)
-                }}
-              >
-                <img
-                  className="h-full w-full"
-                  src={`/icons/buyutec.png`}
-                  alt="Logo"
-                />
-              </div>
-              <div
-                className="absolute bottom-[1%]"
-                style={{
-                  fontSize: clampBuilder(320, 450, 0.5, 1.3)
-                }}
-              >
-                <h3 className="font-extrabold text-black">{h3}</h3>
-              </div>
+                {form.h1}
+              </h1>
+              <h2 className="text-md font-light leading-6">{form.h2}</h2>
+            </div>
+            <div className="absolute bottom-12 h-20">
+              <img
+                className="h-full w-full"
+                src={`/icons/${form.icon}`}
+                alt="Logo"
+              />
+            </div>
+            <div className="absolute bottom-3">
+              <p className="text-xl font-extrabold text-black">{form.p}</p>
             </div>
           </div>
         </div>
-        <input type="file" onChange={e => handleInput(e)}></input>
-      </main>
-    </ThemeProvider>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <Input
+          type="file"
+          onChange={e => {
+            const file = e.target.files[0]
+
+            if (file) {
+              const reader = new FileReader()
+
+              reader.onload = function (event) {
+                setData(JSON.parse(event.target.result))
+              }
+
+              reader.readAsText(file)
+            }
+          }}
+        />
+        <Button onClick={nextData}>Generate All Post</Button>
+      </div>
+    </main>
   )
 }
