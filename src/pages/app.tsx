@@ -1,68 +1,35 @@
 import '@fontsource/poppins'
-import { zodResolver } from '@hookform/resolvers/zod'
 import html2canvas from 'html2canvas'
-import { useRef } from 'react'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
+import { useRef, useState } from 'react'
 
 import { ThemeProvider } from '@/components/theme-provider'
-import { Button } from '@/components/ui/button'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
 import useDownload from '@/hooks/useDownload'
-
-const FormSchema = z.object({
-  h1: z.string().min(8, {
-    message: '8 karakterden az olamaz.'
-  }),
-  h2: z.string().min(8, {
-    message: '8 karakterden az olamaz.'
-  }),
-  p: z.string().min(8, {
-    message: '8 karakterden az olamaz.'
-  }),
-  icon: z.string()
-})
 
 export default function App() {
   const canvasRef = useRef(null)
   const { download } = useDownload()
-  // const [images, setImages] = useState([])
-
-  const form = useForm<z.infer<typeof FormSchema>>({
-    resolver: zodResolver(FormSchema),
-    defaultValues: {
-      h1: "Google'da kaybolmak mı?",
-      h2: 'Asla! İşletmeniz her zaman zirvede!',
-      p: 'Bilinirlik',
-      icon: 'imlec.png'
-    }
-  })
-
-  const { h1, h2, p, icon } = form.getValues()
-
-  function onSubmit(data: z.infer<typeof FormSchema>) {
-    createImage()
-  }
-
-  async function createImage() {
+  const [h1, setH1] = useState('')
+  const [h2, setH2] = useState('')
+  const [h3, setH3] = useState('')
+  const [images, setImages] = useState([])
+  async function createImage(content) {
     if (canvasRef.current) {
-      const canvas = await html2canvas(canvasRef.current, {
-        useCORS: true,
-        scale: 6
-      })
-
-      const data = canvas.toDataURL('image/jpeg')
-
-      // setImages([...images, data])
-      download([data])
+      const newImages = await Promise.all(
+        content.map(async item => {
+          setH1(Math.random())
+          setH2(Math.random())
+          setH3(Math.random())
+          const canvas = await html2canvas(canvasRef.current, {
+            useCORS: true,
+            scale: 6
+          })
+          const data = canvas.toDataURL('image/jpeg')
+          console.log(item)
+          return data
+        })
+      )
+      download(newImages)
+      console.log(images)
     }
   }
 
@@ -77,6 +44,22 @@ export default function App() {
     const yAxisIntersection = -minWidth * slope + minFontSize
 
     return `clamp( ${minFontSize}rem, ${yAxisIntersection}rem + ${slope * 100}vw, ${maxFontSize}rem )`
+  }
+  function handleInput(e: any) {
+    const file = e.target.files[0]
+
+    if (file) {
+      const reader = new FileReader()
+
+      reader.onload = function (event) {
+        console.log(JSON.parse(event.target.result))
+        createImage(JSON.parse(event.target.result))
+      }
+
+      reader.readAsText(file)
+    } else {
+      console.log('No file selected')
+    }
   }
 
   return (
@@ -110,7 +93,7 @@ export default function App() {
               >
                 <img
                   className="h-full w-full"
-                  src={`/icons/${icon}`}
+                  src={`/icons/buyutec.png`}
                   alt="Logo"
                 />
               </div>
@@ -120,60 +103,12 @@ export default function App() {
                   fontSize: clampBuilder(320, 450, 0.5, 1.3)
                 }}
               >
-                <p className="font-extrabold text-black">{p}</p>
+                <h3 className="font-extrabold text-black">{h3}</h3>
               </div>
             </div>
           </div>
-
-          <Form {...form}>
-            <form
-              className="mt-8 space-y-6"
-              onSubmit={form.handleSubmit(onSubmit)}
-            >
-              <FormField
-                control={form.control}
-                name="h1"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Başlık</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="h2"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Alt Başlık</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="p"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Anahtar Kelime</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit">Oluştur</Button>
-            </form>
-          </Form>
         </div>
+        <input type="file" onChange={e => handleInput(e)}></input>
       </main>
     </ThemeProvider>
   )
